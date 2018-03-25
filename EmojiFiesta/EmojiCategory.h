@@ -1,3 +1,4 @@
+#import <Foundation/Foundation.h>
 #import "Emoji.h"
 
 @interface EmojiCategory : NSObject

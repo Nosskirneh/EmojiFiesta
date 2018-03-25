@@ -145,7 +145,7 @@
     }
 
     // Put Flags at the bottom
-    for (int i = allCategories.count - 1; i > 0; i--) {
+    for (long i = allCategories.count - 1; i > 0; i--) {
         EmojiCategory *category = allCategories[i];
         if ([category.id hasSuffix:@"Flags"]) {
             [allCategories removeObjectAtIndex:i];
