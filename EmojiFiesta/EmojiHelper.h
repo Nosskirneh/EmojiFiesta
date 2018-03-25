@@ -1,13 +1,4 @@
-//
-//  EmojiHelper.h
-//  EmojiFun
-//
-//  Created by Sabatino Masala on 01/10/15.
-//  Copyright © 2015 Sabatino Masala. All rights reserved.
-//
-
-#import <Foundation/Foundation.h>
-#import "MyEmojiCategory.h"
+#import "EmojiCategory.h"
 
 @interface NSObject (UIKeyboardEmojiCategory)
 
@@ -21,7 +12,8 @@
 
 @interface EmojiHelper : NSObject
 
++ (NSArray<NSString *> *)getRecentlyUsedEmojis;
 + (NSArray<NSString *> *)getAllEmojis;
-+ (NSArray<MyEmojiCategory *> *)getAllEmojisInCategories;
++ (NSArray<EmojiCategory *> *)getAllEmojisInCategories;
 
 @end

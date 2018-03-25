@@ -1,22 +1,62 @@
-//
-//  EmojiHelper.m
-//  EmojiFun
-//
-//  Created by Sabatino Masala on 01/10/15.
-//  Copyright © 2015 Sabatino Masala. All rights reserved.
-//
-
 #import "EmojiHelper.h"
-#import "MyEmojiCategory.h"
-#import "MyEmoji.h"
 
 @implementation EmojiHelper
 
-+ (NSArray<MyEmojiCategory *> *)getAllEmojisInCategories {
++ (NSArray<NSString *> *)getRecentlyUsedEmojis {
+    NSUserDefaults *emojiPrefs = [[NSUserDefaults alloc] initWithSuiteName:@"com.apple.EmojiPreferences"];
+    NSDictionary *emojiPrefsDict = [emojiPrefs dictionaryRepresentation];
+    if (emojiPrefsDict[@"EMFDefaultsKey"][@"EMFRecentsKey"])
+        return emojiPrefsDict[@"EMFDefaultsKey"][@"EMFRecentsKey"];
+    else if (emojiPrefsDict[@"EmojiDefaultsKey"][@"EmojiRecentsDefaultsKey"][@"RecentsKey"])
+        return emojiPrefsDict[@"EmojiDefaultsKey"][@"EmojiRecentsDefaultsKey"][@"RecentsKey"];
+
+    return nil;
+}
+
++ (NSArray<NSString *> *)getAllEmojis {
     // Let's get a reference to Apple's UIKeyboardEmojiCategory class
     Class UIKeyboardEmojiCategory = NSClassFromString(@"UIKeyboardEmojiCategory");
 
-    NSMutableArray *returnValue = [NSMutableArray array];
+    NSMutableArray *allEmojis = [NSMutableArray array];
+
+    // Loop over all categories
+    for (int i = 0; i < [UIKeyboardEmojiCategory categories].count; i++) {
+        id category = [UIKeyboardEmojiCategory categoryForType:i];
+
+        // Let's get thte category name
+        NSString *categoryName = [category performSelector:@selector(name)];
+
+        // Ignore the 'recent' category, so we only get unique Emoji
+        if ([categoryName hasSuffix:@"Recent"]) {
+            continue;
+        }
+
+        // The flags category is a bit special on iOS < 10.1.1
+        if ([UIKeyboardEmojiCategory respondsToSelector:@selector(computeEmojiFlagsSortedByLanguage)] &&
+            [categoryName hasSuffix:@"Flags"]) {
+            // flagEmoji contains the emoji itself
+            NSArray *flagEmoji = [UIKeyboardEmojiCategory computeEmojiFlagsSortedByLanguage];
+            [allEmojis addObjectsFromArray:flagEmoji];
+            continue;
+        }
+
+        NSMutableArray *emojiArray = [category valueForKey:@"emoji"];
+
+        for (id emojiItem in emojiArray) {
+            // Emoji! 🎉
+            NSString *emojiString = [emojiItem valueForKey:@"emojiString"];
+            // Add the emoji
+            [allEmojis addObject:emojiString];
+        }
+    }
+    return allEmojis;
+}
+
++ (NSArray<EmojiCategory *> *)getAllEmojisInCategories {
+    // Let's get a reference to Apple's UIKeyboardEmojiCategory class
+    Class UIKeyboardEmojiCategory = NSClassFromString(@"UIKeyboardEmojiCategory");
+
+    NSMutableArray *allCategories = [NSMutableArray array];
 
     // Loop over all categories
     for (int i = 0; i < [UIKeyboardEmojiCategory categories].count; i++) {
@@ -36,8 +76,9 @@
         NSString *displayName = [UIKeyboardEmojiCategory displayName:i];
 
         // Instanciate our own category container
-        MyEmojiCategory *emojiCategory = [MyEmojiCategory new];
+        EmojiCategory *emojiCategory = [EmojiCategory new];
         emojiCategory.name = displayName;
+        emojiCategory.id = categoryName;
 
         // The flags category is a bit special on iOS < 10.1.1
         if ([UIKeyboardEmojiCategory respondsToSelector:@selector(computeEmojiFlagsSortedByLanguage)] &&
@@ -68,7 +109,7 @@
             NSString *emojiString = [emojiItem valueForKey:@"emojiString"];
 
             // Create our own emoji container
-            MyEmoji *emoji = [MyEmoji new];
+            Emoji *emoji = [Emoji new];
             emoji.emojiString = emojiString;
 
             // Let's create the variations container
@@ -100,49 +141,20 @@
         emojiCategory.emoji = categoryEmoji;
 
         // Add the category to the return array
-        [returnValue addObject:emojiCategory];
+        [allCategories addObject:emojiCategory];
     }
-    return returnValue;
-}
 
-// This does not take the variations (skintones) into account
-+ (NSArray<NSString *> *)getAllEmojis {
-    // Let's get a reference to Apple's UIKeyboardEmojiCategory class
-    Class UIKeyboardEmojiCategory = NSClassFromString(@"UIKeyboardEmojiCategory");
-
-    NSMutableArray *returnValue = [NSMutableArray array];
-
-    // Loop over all categories
-    for (int i = 0; i < [UIKeyboardEmojiCategory categories].count; i++) {
-        id category = [UIKeyboardEmojiCategory categoryForType:i];
-
-        // Let's get thte category name
-        NSString *categoryName = [category performSelector:@selector(name)];
-
-        // Ignore the 'recent' category, so we only get unique Emoji
-        if (!categoryName || [categoryName hasSuffix:@"Recent"]) {
-            continue;
-        }
-
-        // The flags category is a bit special on iOS < 10.1.1
-        if ([UIKeyboardEmojiCategory respondsToSelector:@selector(computeEmojiFlagsSortedByLanguage)] &&
-            [categoryName hasSuffix:@"Flags"]) {
-            // flagEmoji contains the emojis itself
-            NSArray *flagEmoji = [UIKeyboardEmojiCategory computeEmojiFlagsSortedByLanguage];
-            [returnValue addObjectsFromArray:flagEmoji];
-            continue;
-        }
-
-        NSMutableArray *emojiArray = [category valueForKey:@"emoji"];
-
-        for (id emojiItem in emojiArray) {
-            // Emoji! 🎉
-            NSString *emojiString = [emojiItem valueForKey:@"emojiString"];
-            // Add the emoji
-            [returnValue addObject:emojiString];
+    // Put Flags at the bottom
+    for (int i = allCategories.count - 1; i > 0; i--) {
+        EmojiCategory *category = allCategories[i];
+        if ([category.id hasSuffix:@"Flags"]) {
+            [allCategories removeObjectAtIndex:i];
+            [allCategories insertObject:category atIndex:allCategories.count];
+            break;
         }
     }
-    return returnValue;
+
+    return allCategories;
 }
 
 @end
